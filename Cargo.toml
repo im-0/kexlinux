@@ -1,0 +1,23 @@
+[package]
+name = "kexlinux"
+description = "Userspace bootloader for Linux using kexec"
+homepage = "https://github.com/im-0/kexlinux"
+repository = "https://github.com/im-0/kexlinux"
+version = "0.0.1"
+authors = [ "Ivan Mironov <mironov.ivan@gmail.com>" ]
+license = "LGPL-3.0+"
+
+[lib]
+name = "kexlinux"
+path = "src/lib/lib.rs"
+
+[dependencies]
+log = "*"
+env_logger = "*"
+
+[dependencies.clap]
+version = "*"
+features = [ "suggestions", "color" ]
+
+[dependencies.syslinux-conf]
+git = "https://github.com/im-0/syslinux-conf"
