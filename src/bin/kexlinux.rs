@@ -38,6 +38,17 @@ fn kexlinux_from_mount(matches: &clap::ArgMatches)
     }
 }
 
+fn kexlinux_from_dev(matches: &clap::ArgMatches)
+        -> Result<kexlinux::KexLinux, kexlinux::KexLinuxError> {
+    match matches.value_of("BOOT DEVICE") {
+        Some(boot_dev) => {
+            let boot_dev = std::path::PathBuf::from(boot_dev);
+            kexlinux::KexLinux::from_device_path(boot_dev)
+        },
+        None => kexlinux::KexLinux::auto(),
+    }
+}
+
 fn main() {
     env_logger::init().unwrap();
 
@@ -64,10 +75,18 @@ fn main() {
             .group(clap::ArgGroup::with_name("detection")
                 .arg("type")
                 .arg("CONF FILE PATH")))
+        .subcommand(clap::SubCommand::with_name("dev")
+            .about("Boot from specified device or automatically detect boot \
+                   device.")
+            .arg(clap::Arg::with_name("BOOT DEVICE")
+                .help("Path to boot device.")
+                .index(1)))
         .get_matches();
 
     let kexlinux = if let Some(matches) = matches.subcommand_matches("mount") {
         kexlinux_from_mount(matches)
+    } else if let Some(matches) = matches.subcommand_matches("dev") {
+        kexlinux_from_dev(matches)
     } else {
         error!("No command");
         std::process::exit(1)

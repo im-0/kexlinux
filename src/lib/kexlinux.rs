@@ -1,6 +1,9 @@
 use std;
 
+extern crate natord;
 extern crate syslinux_conf;
+
+use blockdev;
 
 const CMD_KEXEC: &'static str = "kexec";
 
@@ -32,6 +35,10 @@ impl std::convert::From<syslinux_conf::ReaderError> for KexLinuxError {
 
 impl std::convert::From<std::io::Error> for KexLinuxError {
     fn from(_: std::io::Error) -> KexLinuxError { KexLinuxError{} }
+}
+
+impl std::convert::From<blockdev::BlockDevError> for KexLinuxError {
+    fn from(_: blockdev::BlockDevError) -> KexLinuxError { KexLinuxError{} }
 }
 
 impl SyslinuxConf {
@@ -152,6 +159,40 @@ impl KexLinux {
             -> Result<KexLinux, KexLinuxError> {
         KexLinux::from_reader(try!(
             syslinux_conf::Reader::from_local(root)))
+    }
+
+    fn from_device_list<BlockDevIter>(devs: BlockDevIter)
+            -> Result<KexLinux, KexLinuxError>
+            where BlockDevIter: Iterator<Item=blockdev::BlockDev> {
+        let mut filesystems = blockdev::get_filesystems(devs);
+        filesystems.sort_by(|a, b| natord::compare(&a.dev.name, &b.dev.name));
+
+        for fs in filesystems {
+            match blockdev::Mount::mount(&fs) {
+                Ok(fs) => match KexLinux::from_local(fs.path().clone()) {
+                    Ok(kexlinux) => return Ok(kexlinux),
+                    Err(_) => (),  // continue
+                },
+
+                Err(_) => (),  // continue
+            }
+        };
+
+        error!("Unable to find bootable block device");
+        Err(KexLinuxError{})
+    }
+
+    pub fn from_device_path(dev: std::path::PathBuf)
+            -> Result<KexLinux, KexLinuxError> {
+        let dev = try!(blockdev::BlockDev::from_dev_path(dev));
+        match dev.partitions.is_empty() {
+            true => KexLinux::from_device_list(vec![dev].into_iter()),
+            false => KexLinux::from_device_list(dev.partitions.into_iter()),
+        }
+    }
+
+    pub fn auto() -> Result<KexLinux, KexLinuxError> {
+        KexLinux::from_device_list(try!(blockdev::BlockDevs::new()))
     }
 
     pub fn get_conf(&self) -> &SyslinuxConf {
