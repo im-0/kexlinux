@@ -225,7 +225,9 @@ impl KexLinux {
         let mut cmd = std::process::Command::new(CMD_KEXEC);
         cmd.arg("--exec");
         cmd.stdin(std::process::Stdio::null());
-        KexLinux::check_kexec_output(cmd, "exec")
+        try!(KexLinux::check_kexec_output(cmd, "exec"));
+
+        panic!("This will never happen")
     }
 
     pub fn boot(label: &syslinux_conf::Label) -> Result<(), KexLinuxError> {
