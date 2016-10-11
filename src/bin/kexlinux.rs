@@ -69,7 +69,8 @@ fn main() {
     let kexlinux = if let Some(matches) = matches.subcommand_matches("mount") {
         kexlinux_from_mount(matches)
     } else {
-        panic!("This will never happen")
+        error!("No command");
+        std::process::exit(1)
     };
 
     let kexlinux = match kexlinux {
